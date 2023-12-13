@@ -39,7 +39,7 @@ options:
 
 ### Example
 
-For instance, if you wish to generate 4 dummy datasets in the `derivatives/` folder with a number of 10, 100, 1000, and 10000 subjects, this would correspond to the following command:
+If you wish to generate 4 dummy datasets in the `derivatives/` folder with a number of 10, 100, 1000, and 10000 subjects, this would correspond to the following command:
 
 ```bash
 python /path/to/produce_dummy_bids_dataset.py --n_subjects 10 100 1000 10000
