@@ -27,10 +27,10 @@ Produce dummy BIDS dataset(s) for testing.
 options:
     -h, --help            show this help message and exit
     --template_bids_dir TEMPLATE_BIDS_DIR
-                        Path to template BIDS datasetIf not specified, the template BIDS dataset will be the
+                        Path to template BIDS dataset. If not specified, the template BIDS dataset will be the
                         root directory.
     --n_subjects N_SUBJECTS [N_SUBJECTS ...]
-                        List of number of subjects to produce.Each item in the list will produce a dataset with
+                        List of number of subjects to produce. Each item in the list will produce a dataset with
                         that number of subjects.
     --output_dir OUTPUT_DIR
                         Path to output directory. If not specified, the output directory will be derivatives/ of
