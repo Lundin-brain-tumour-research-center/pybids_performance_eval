@@ -1,0 +1,6 @@
+# Generated BIDS datasets in default location
+derivatives/*
+
+# Mac-specific files
+.DS_Store
+
