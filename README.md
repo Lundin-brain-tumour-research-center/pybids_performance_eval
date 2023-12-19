@@ -45,6 +45,8 @@ pip install -r requirements.txt
 In this project, we patched the vanilla implementation of the `BIDSLayoutIndexer` with a 
 new method (`index_dir`) which indexes only a specific directory and its sub-directories. 
 
+https://github.com/TranslationalML/pybids_performance_eval/blob/83192c69b6fe4743ff2e4a45700d474de41e448e/code/evaluate_pybids.py#L146-L181
+
 Indeed, PyBIDS does not provide any public method to update a BIDSLayout object
   (Referred as *incremental indexing* - See [PyBIDS issue](https://github.com/bids-standard/pybids/issues/522)).
 If new files are added to the BIDS dataset, a new BIDSLayout has to be created which
