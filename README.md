@@ -35,34 +35,20 @@ pip install -r requirements.txt
 - **Modes**: "no-database-load", "database-load"
 - **PyBIDS version**: 0.16.4
 
-### BIDSLayout initialization
-
-#### Runtime bar plot
-
-![Runtime Plot - Init](./code/results/profiling_results_init_time.png)
-
-#### Memory bar plot
-
-![Memory Plot - Init](./code/results/profiling_results_init_memory.png)
-
-### BIDSLayout update
-
-#### Runtime bar plot
-
-![Runtime Plot - Update](./code/results/profiling_results_add_subject_time.png)
-
-#### Memory bar plot
-
-![Memory Plot - Update](./code/results/profiling_results_add_subject_memory.png)
+| | Runtime | Memory |
+|---|---|---|
+| BIDSLayout initialization | ![Runtime Plot - Init](./code/results/profiling_results_init_time.png) | ![Memory Plot - Init](./code/results/profiling_results_init_memory.png) |
+| BIDSLayout update | ![Runtime Plot - Update](./code/results/profiling_results_add_subject_time.png) | ![Memory Plot - Update](./code/results/profiling_results_add_subject_memory.png) |
 
 #### Notes
 
 In this project, we patched the vanilla implementation of the `BIDSLayoutIndexer` with a 
 new method (`index_dir`) which indexes only a specific directory and its sub-directories. 
 
-Indeed, PyBIDS does not provide any public method to update a BIDSLayout object and so,
-if new files are added to the BIDS dataset, a new BIDSLayout has to be created which
-reindex the whole content, even though we are using the database file.
+Indeed, PyBIDS does not provide any public method to update a BIDSLayout object
+  (Referred as *incremental indexing* - See [PyBIDS issue](https://github.com/bids-standard/pybids/issues/522)).
+If new files are added to the BIDS dataset, a new BIDSLayout has to be created which
+  reindex the whole content, even though a database file is employed.
 
 ## How to reproduce
 
