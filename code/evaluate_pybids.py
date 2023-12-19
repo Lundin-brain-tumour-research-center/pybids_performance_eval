@@ -143,7 +143,7 @@ def add_subject(layout: BIDSLayout):
     return new_subject_dir
 
 
-class BIDSLayoutIndexerPatch(BIDSLayoutIndexer):
+class BIDSLayoutIncrementalIndexer(BIDSLayoutIndexer):
     def index_dir(self, layout, path, force):
         """Index a directory of BIDS files.
 
@@ -201,7 +201,7 @@ def update_bidslayout(
         )
     elif mode == "database-load":
         # Index the new subject directory only
-        indexer = BIDSLayoutIndexerPatch(
+        indexer = BIDSLayoutIncrementalIndexer(
             validate=False,
         )
         indexer.index_dir(
