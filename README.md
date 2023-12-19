@@ -27,11 +27,13 @@ pip install -r requirements.txt
 
 ## Results
 
-**Machine**: Ubuntu 22.04, 32 CPUs, 64GB
-**Test set**: 4 dummy BIDS datasets with 10, 100, 1000, and 10000 subjects respectively
-**Contexts**: "BIDSLayout initialization", "BIDSLayout update"
-**Modes**: "no-database-load", "database-load"
-**PyBIDS version**: 0.16.4
+### Description
+
+- **Machine**: Ubuntu 22.04, 32 CPUs, 64GB
+- **Test set**: 4 dummy BIDS datasets with 10, 100, 1000, and 10000 subjects respectively
+- **Contexts**: "BIDSLayout initialization", "BIDSLayout update"
+- **Modes**: "no-database-load", "database-load"
+- **PyBIDS version**: 0.16.4
 
 ### BIDSLayout initialization
 
