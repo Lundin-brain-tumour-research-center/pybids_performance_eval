@@ -1,9 +1,19 @@
 import os
 import argparse
+import shutil
+from pathlib import Path
+
+import logging
+import tqdm
+
 import time
 from memory_profiler import memory_usage
-from bids import BIDSLayout
-import tqdm
+
+from bids import BIDSLayout, BIDSLayoutIndexer
+from bids.layout.models import Tag
+from bids.layout.validation import validate_indexing_args
+from bids.layout.index import _regexfy
+from bids.utils import listify
 
 
 __DIR__ = os.path.dirname(os.path.abspath(__file__))
@@ -55,21 +65,22 @@ def append_profiling_results(tsv_file: str, results: dict):
             {
                 "n_subjects": <n_subjects>,
                 "mode": <mode>,
+                "test": <test>,
                 "time": <time>,
                 "memory": <memory>
             }
-
     """
     # Create TSV file if it does not exist
     if not os.path.exists(tsv_file):
         with open(tsv_file, "w") as f:
-            f.write("n_subjects\tmode\ttime\tmemory\n")
+            f.write("n_subjects\tmode\ttest\ttime\tmemory\n")
 
     # Append results to TSV file
     with open(tsv_file, "a") as f:
         f.write(
             f"{results['n_subjects']}\t"
             f"{results['mode']}\t"
+            f"{results['test']}\t"
             f"{results['time']}\t"
             f"{results['memory']}\n"
         )
@@ -84,7 +95,6 @@ def create_bidslayout(dataset_path: str, mode: str) -> BIDSLayout:
 
     Returns:
         BIDSLayout object.
-
     """
     if mode == "no-database-load":
         layout = BIDSLayout(
@@ -102,6 +112,107 @@ def create_bidslayout(dataset_path: str, mode: str) -> BIDSLayout:
     return layout
 
 
+def add_subject(layout: BIDSLayout):
+    """Add a new subject to a BIDS dataset.
+
+    Args:
+        layout: BIDSLayout object representing the BIDS dataset.
+    """
+    # Get dataset path and new subject ID / directory name
+    dataset_path = os.path.abspath(layout.root)
+    last_subject_id = int(sorted(layout.get_subjects())[-1])
+    new_subject_id = last_subject_id + 1
+    new_subject = f"sub-{new_subject_id:06d}"
+    new_subject_dir = os.path.join(dataset_path, new_subject)
+    # Create new subject directory
+    if os.path.exists(new_subject_dir):
+        shutil.rmtree(new_subject_dir)
+    # Copy files from existing subject
+    template_subject_dir = os.path.join(dataset_path, "sub-000001")
+    shutil.copytree(
+        template_subject_dir,
+        new_subject_dir,
+    )
+    # Rename files
+    for root, _, files in os.walk(new_subject_dir):
+        for file in files:
+            old_file = os.path.join(root, file)
+            new_file = os.path.join(root, file.replace("sub-000001", new_subject))
+            shutil.move(old_file, new_file)
+
+    return new_subject_dir
+
+
+class BIDSLayoutIndexerPatch(BIDSLayoutIndexer):
+    def index_dir(self, layout, path, force):
+        """Index a directory of BIDS files.
+
+        Args:
+            layout: BIDSLayout object.
+            path: Path to the directory to be indexed (relative to the root).
+            force: Whether to force indexing of files that are not BIDS compliant.
+
+        Notes:
+            This method is patched to allow the update of a BIDSLayout object when
+            a new subject is added to the dataset, which is not supported by the
+            original implementation.
+        """
+        self._layout = layout
+        self._config = list(layout.config.values())
+
+        ignore, force = validate_indexing_args(
+            self.ignore, self.force_index, self._layout._root
+        )
+
+        # Do not accept string patterns
+        self._include_patterns = [
+            _regexfy(patt, root=self._layout._root) for patt in listify(force)
+        ]
+        self._exclude_patterns = [
+            _regexfy(patt, root=self._layout._root) for patt in listify(ignore)
+        ]
+
+        # Create content to be added to the database
+        all_bfs, all_tag_dicts = self._index_dir(Path(path), self._config)
+
+        # Add content to database
+        self.session.bulk_save_objects(all_bfs)
+        self.session.bulk_insert_mappings(Tag, all_tag_dicts)
+        self.session.commit()
+
+
+def update_bidslayout(
+    layout: BIDSLayout, new_subject_dir: str, mode: str
+) -> BIDSLayout:
+    """Add a new subject and update a BIDSLayout object.
+
+    Args:
+        layout: BIDSLayout object.
+        new_subject_dir: New subject directory name e.g. "sub-000001".
+        mode: "no-database-load" or "database-load".
+
+    Returns:
+        BIDSLayout object.
+    """
+    if mode == "no-database-load":
+        # Re-initialize layout
+        layout = BIDSLayout(
+            layout.root, config=os.path.join(__DIR__, "bids.json"), validate=False
+        )
+    elif mode == "database-load":
+        # Index the new subject directory only
+        indexer = BIDSLayoutIndexerPatch(
+            validate=False,
+        )
+        indexer.index_dir(
+            layout,
+            new_subject_dir,
+            force=True,
+        )
+
+    return layout
+
+
 def main():
     parser = get_parser()
     args = parser.parse_args()
@@ -116,11 +227,13 @@ def main():
         database_path = os.path.join(dataset_path, "code", "layout.db")
         if not os.path.exists(database_path):
             layout = BIDSLayout(
-                dataset_path, config=os.path.join(__DIR__, "bids.json"), validate=False
+                dataset_path,
+                config=os.path.join(__DIR__, "bids.json"),
+                validate=False,
             )
             layout.save(database_path)
 
-    # Evaluate PyBIDS
+    # Evaluate PyBIDS to create BIDSLayout objects
     modes = ["no-database-load", "database-load"]
     for n_subjects in tqdm.tqdm(
         args.n_subjects,
@@ -129,7 +242,7 @@ def main():
     ):
         dataset_path = os.path.join(args.datasets_root, f"dummy-{n_subjects}")
         for mode in modes:
-            # Evaluate
+            # Evaluate initialization
             start_time = time.time()
             (memory, retval) = memory_usage(
                 (create_bidslayout, (dataset_path, mode)), max_usage=True, retval=True
@@ -141,6 +254,60 @@ def main():
             results = {
                 "n_subjects": n_subjects,
                 "mode": mode,
+                "test": "init",
+                "time": elapsed_time,
+                "memory": memory,
+            }
+            if args.output_tsv:
+                append_profiling_results(args.output_tsv, results)
+            else:
+                print(results)
+
+            # Retrieve BIDSLayout object from last execution
+            layout = retval
+            logging.debug(f"Layout (BEFORE ADD SUBJECT): {layout}")
+
+            # Add a new subject
+            new_subject_dir = add_subject(layout)
+
+            # Evaluate adding a new subject
+            start_time = time.time()
+            (memory, retval) = memory_usage(
+                (update_bidslayout, (layout, new_subject_dir, mode)),
+                max_usage=True,
+                retval=True,
+                # Decrease interval to make sure we have interval not larger than the actual function runtime,
+                # otherwise it will trigger multiple calls to the function
+                interval=1e-4,
+            )
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+
+            # Unpack return values
+            layout = retval
+
+            # Check that files of the new subject directory
+            # were added to the database
+            assert (
+                len(
+                    layout.get(
+                        subject=new_subject_dir.split("-")[-1],
+                        return_type="file",
+                    )
+                )
+                > 0
+            )
+
+            logging.debug(f"Layout (AFTER ADD SUBJECT): {layout}")
+
+            # Remove new subject directory for next iteration
+            shutil.rmtree(new_subject_dir)
+
+            # Print results
+            results = {
+                "n_subjects": n_subjects,
+                "mode": mode,
+                "test": "add_subject",
                 "time": elapsed_time,
                 "memory": memory,
             }
