@@ -7,28 +7,75 @@ In particular, it contains a dummy BIDS dataset with one subject and python scri
 - `code/evaluate_pybids.py`: evaluate pybids on these datasets
 - `code/plot_results.py`: plot the results and save the runtime and memory plots in HTML files
 
-## Results
+## Dependencies
 
-Machine: Ubuntu 22.04, 32 CPUs, 64GB
-Test set: 4 dummy BIDS datasets with 10, 100, 1000, and 10000 subjects respectively
+The project requires Python `>=3.10` and depends on the following Python packages:
 
-### Runtime bar plot
-
-![Runtime Plot](./code/results/profiling_results_time.png)
-
-### Memory bar plot
-
-![Memory (MB)](./code/results/profiling_results_memory.png)
-
-## How to reproduce
-
-### Dependencies
-
+- `pybids==0.16.4` 
 - `pandas`
 - `tqdm`
 - `argparse`
 - `memory_profiler`
 - `plotly`
+- `kaleido`
+
+A `requirements.txt` file is provided for convenience to install them, which consists of running in a terminal:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Results
+
+**Machine**: Ubuntu 22.04, 32 CPUs, 64GB
+**Test set**: 4 dummy BIDS datasets with 10, 100, 1000, and 10000 subjects respectively
+**Contexts**: "BIDSLayout initialization", "BIDSLayout update"
+**Modes**: "no-database-load", "database-load"
+**PyBIDS version**: 0.16.4
+
+### BIDSLayout initialization
+
+#### Runtime bar plot
+
+![Runtime Plot - Init](./code/results/profiling_results_init_time.png)
+
+#### Memory bar plot
+
+![Memory Plot - Init](./code/results/profiling_results_init_memory.png)
+
+### BIDSLayout update
+
+#### Runtime bar plot
+
+![Runtime Plot - Update](./code/results/profiling_results_add_subject_time.png)
+
+#### Memory bar plot
+
+![Memory Plot - Update](./code/results/profiling_results_add_subject_memory.png)
+
+#### Notes
+
+In this project, we patched the vanilla implementation of the `BIDSLayoutIndexer` with a 
+new method (`index_dir`) which indexes only a specific directory and its sub-directories. 
+
+Indeed, PyBIDS does not provide any public method to update a BIDSLayout object and so,
+if new files are added to the BIDS dataset, a new BIDSLayout has to be created which
+reindex the whole content, even though we are using the database file.
+
+## How to reproduce
+
+### How to run the whole workflow
+
+For convenience, we are providing the script `run_eval_workflow.sh` which will take care of running all the scripts described below.
+With this script, you only have to run in a terminal the following command:
+
+```bash
+sh run_eval_workflow.sh
+```
+
+This will generate the TSV results file and all the figures in the root directory of the project.
+
+Note that you would need to have Python `>=3.10` with all the dependencies installed (See [List of dependencies](#dependencies)).
 
 ### How to generate the dummy BIDS datasets
 
