@@ -7,6 +7,8 @@ In particular, it contains a dummy BIDS dataset with one subject and python scri
 - `code/evaluate_pybids.py`: evaluate pybids on these datasets
 - `code/plot_results.py`: plot the results and save the runtime and memory plots in HTML files
 
+The dummy nifti image used in this repository is the result of a dicom to nifti conversion with `dcm2niix` of the dummy dicom series provided by https://github.com/TranslationalML/PACSMAN_data, and distributed under the [Creative Commons Attribution 4.0 International Public License](https://github.com/TranslationalML/PACSMAN_data/blob/main/pacsman_data/data/LICENSE).
+
 ## Dependencies
 
 The project requires Python `>=3.10` and depends on the following Python packages:
